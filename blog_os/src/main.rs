@@ -5,8 +5,14 @@
 #![reexport_test_harness_main = "test_main"]
 
 use core::panic::PanicInfo;
+
+use crate::vga_buffer::WRITER;
 mod serial;
 mod vga_buffer;
+
+// ==========================
+//  主运行区（Kernel Entry）
+// ==========================
 
 #[cfg(not(test))]
 #[panic_handler]
@@ -41,6 +47,9 @@ pub extern "C" fn _start() -> ! {
     loop {}
 }
 
+// ==========================
+//  测试区（Unit Tests）
+// ==========================
 #[cfg(test)]
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
@@ -50,17 +59,31 @@ fn panic(info: &PanicInfo) -> ! {
     loop {}
 }
 
-pub fn test_runner(tests: &[&dyn Fn()]) {
-    println!("Running {} tests", tests.len());
-    for test in tests {
-        test();
+pub trait Testable {
+    fn run(&self) -> ();
+}
+
+impl<T> Testable for T
+where
+    T: Fn(), // T 必须要满足可像函数一样被调用
+{
+    fn run(&self) {
+        serial_print!("{}...\t", core::any::type_name::<T>()); // 打印函数名
+        self(); // 调用测试函数本身
+        serial_println!("[ok]"); // 打印 [ok] 测试完成
     }
+}
+
+pub fn test_runner(tests: &[&dyn Testable]) {
+    serial_println!("\nRunning {} tests", tests.len());
+    for test in tests {
+        test.run();
+    }
+    serial_println!();
     exit_qemu(QemuExitCode::Success);
 }
 
 #[test_case]
 fn trivial_assertion() {
-    serial_print!("trivial_assertion... ");
-    assert_eq!(0, 1);
-    serial_println!("[ok]")
+    assert_eq!(1, 1);
 }
