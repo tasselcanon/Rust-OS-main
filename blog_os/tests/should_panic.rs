@@ -26,5 +26,5 @@ pub extern "C" fn _start() -> ! {
 
 fn should_fail() {
     serial_println!("should failed... ");
-    assert_eq!(0, 1);
+    assert_eq!(0, 2);
 }
