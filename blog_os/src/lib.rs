@@ -3,11 +3,16 @@
 #![feature(custom_test_frameworks)]
 #![test_runner(crate::test_runner)]
 #![reexport_test_harness_main = "test_main"]
-
+#![feature(abi_x86_interrupt)] // x86-interrupt 并不是稳定特性，需要手动启用
+pub mod interrupts;
 pub mod serial;
 pub mod vga_buffer;
+use x86_64::structures::idt::InterruptDescriptorTable;
 
 use core::panic::PanicInfo;
+
+// ==================
+//      EXIT QEMU
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u32)]
 pub enum QemuExitCode {
@@ -23,10 +28,11 @@ pub fn exit_qemu(exit_code: QemuExitCode) {
         port.write(exit_code as u32);
     }
 }
+//      EXIT QEMU END
+// ==================
 
 // ==================
 //      TASTABLE
-// ==================
 pub trait Testable {
     fn run(&self) -> ();
 }
@@ -40,7 +46,6 @@ where
         serial_println!("[ok]"); // 打印 [ok] 测试完成
     }
 }
-// ==================
 //        END
 // ==================
 
