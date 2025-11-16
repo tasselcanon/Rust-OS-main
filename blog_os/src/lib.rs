@@ -7,7 +7,6 @@
 pub mod interrupts;
 pub mod serial;
 pub mod vga_buffer;
-use x86_64::structures::idt::InterruptDescriptorTable;
 
 use core::panic::PanicInfo;
 
