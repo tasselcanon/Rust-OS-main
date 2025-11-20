@@ -30,6 +30,10 @@ pub fn exit_qemu(exit_code: QemuExitCode) {
 //      EXIT QEMU END
 // ==================
 
+pub fn init() {
+    interrupts::init_idt();
+}
+
 // ==================
 //      TASTABLE
 pub trait Testable {
