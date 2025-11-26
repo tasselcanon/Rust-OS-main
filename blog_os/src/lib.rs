@@ -32,7 +32,8 @@ pub fn exit_qemu(exit_code: QemuExitCode) {
 // ==================
 
 pub fn init() {
-    interrupts::init_idt();
+    interrupts::init_idt(); // idt: 定义 CPU 遇到事件后该跳去哪 (中断与异常处理函数)
+    gdt::init(); // gdt: 定义 CPU 如何执行程序 (段、权限、TSS)
 }
 
 // ==================
