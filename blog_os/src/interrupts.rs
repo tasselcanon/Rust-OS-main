@@ -5,6 +5,14 @@ use x86_64::structures::idt::{InterruptDescriptorTable, InterruptStackFrame};
 // 所以我们不能使用标准库的堆分配功能
 // 因此我们需要使用一个静态可变变量来存储 IDT
 use lazy_static::lazy_static;
+use pic8259::ChainedPics; // 用于映射主副 PIC 的映射布局
+use spin;
+
+pub const PIC_1_OFFSET: u8 = 32; // 主 PIC 的中断向量偏移量
+pub const PIC_2_OFFSET: u8 = PIC_1_OFFSET + 8; // 副 PIC 的中断向量偏移量
+// 初始化主副 PIC, 并将主 PIC 的 IRQ0 连接到副 PIC 的 IRQ2
+pub static PICS: spin::Mutex<ChainedPics> =
+    spin::Mutex::new(unsafe { ChainedPics::new(PIC_1_OFFSET, PIC_2_OFFSET) });
 
 lazy_static! {
     static ref IDT: InterruptDescriptorTable = {
