@@ -32,8 +32,12 @@ pub fn exit_qemu(exit_code: QemuExitCode) {
 // ==================
 
 pub fn init() {
-    interrupts::init_idt(); // idt: 定义 CPU 遇到事件后该跳去哪 (中断与异常处理函数)
     gdt::init(); // gdt: 定义 CPU 如何执行程序 (段、权限、TSS)
+    interrupts::init_idt(); // idt: 定义 CPU 遇到事件后该跳去哪 (中断与异常处理函数)
+    unsafe {
+        interrupts::PICS.lock().initialize(); // 初始化主副 PIC
+    }
+    x86_64::instructions::interrupts::enable(); // 启用中断
 }
 
 // ==================
@@ -70,6 +74,9 @@ pub fn test_panic_handler(info: &PanicInfo) -> ! {
     exit_qemu(QemuExitCode::Failed);
     loop {}
 }
+
+// ==================
+//      测试区
 
 #[cfg(test)]
 #[unsafe(no_mangle)]
