@@ -1,5 +1,5 @@
 use crate::gdt;
-use crate::println;
+use crate::{print, println};
 use lazy_static::lazy_static;
 use pic8259::ChainedPics; // 用于映射主副 PIC 的映射布局
 use spin;
@@ -14,7 +14,6 @@ pub static PICS: spin::Mutex<ChainedPics> =
 #[derive(Debug, Clone, Copy)]
 #[repr(u8)]
 // 我们需要把 Timer IRQ0 重映射到 PIC_1_OFFSET(一般是 32)
-// 因为默认情况下 Timer IRQ0 是连接到副 PIC 的 IRQ0
 pub enum InterruptIndex {
     Timer = PIC_1_OFFSET,
 }
@@ -69,7 +68,11 @@ extern "x86-interrupt" fn double_fault_handler(
 
 // 定时器中断处理函数，用于处理定时器中断
 extern "x86-interrupt" fn timer_interrupt_handler(_stack_frame: InterruptStackFrame) {
-    println!("TIMER INTERRUPT");
+    print!(".");
+    unsafe {
+        PICS.lock()
+            .notify_end_of_interrupt(InterruptIndex::Timer.as_u8()); // 发送定时器中断结束信号(EOI)
+    }
 }
 
 #[test_case]
