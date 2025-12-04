@@ -15,7 +15,8 @@ pub static PICS: spin::Mutex<ChainedPics> =
 #[repr(u8)]
 // 我们需要把 Timer IRQ0 重映射到 PIC_1_OFFSET(一般是 32)
 pub enum InterruptIndex {
-    Timer = PIC_1_OFFSET,
+    Timer = PIC_1_OFFSET,        // 定时器中断向量偏移量
+    Keyboard = PIC_1_OFFSET + 1, // 键盘中断向量偏移量
 }
 
 impl InterruptIndex {
@@ -43,6 +44,7 @@ lazy_static! {
                             .set_stack_index(gdt::DOUBLE_FAULT_IST_INDEX); // 设置双重故障使用的专属栈
         }
         idt[InterruptIndex::Timer.as_usize()].set_handler_fn(timer_interrupt_handler); // 注册定时器中断处理函数
+        idt[InterruptIndex::Keyboard.as_usize()].set_handler_fn(keyboard_interrupt_handler); // 注册键盘中断处理函数
         idt
     };
 }
@@ -72,6 +74,35 @@ extern "x86-interrupt" fn timer_interrupt_handler(_stack_frame: InterruptStackFr
     unsafe {
         PICS.lock()
             .notify_end_of_interrupt(InterruptIndex::Timer.as_u8()); // 发送定时器中断结束信号(EOI)
+    }
+}
+
+extern "x86-interrupt" fn keyboard_interrupt_handler(_stack_frame: InterruptStackFrame) {
+    use x86_64::instructions::port::Port;
+    // 我们需要从键盘扫描码端口读取扫描码
+    // 因为键盘控制器在我们获取扫描码之前是不会发送下一个中断的
+    let mut port = Port::new(0x60); // 键盘扫描码端口
+    let scancode: u8 = unsafe { port.read() }; // 从键盘扫描码端口读取扫描码
+
+    let key = match scancode {
+        0x02 => Some('1'),
+        0x03 => Some('2'),
+        0x04 => Some('3'),
+        0x05 => Some('4'),
+        0x06 => Some('5'),
+        0x07 => Some('6'),
+        0x08 => Some('7'),
+        0x09 => Some('8'),
+        0x0a => Some('9'),
+        0x0b => Some('0'),
+        _ => None,
+    };
+    if let Some(key) = key {
+        print!("{}", key);
+    }
+    unsafe {
+        PICS.lock()
+            .notify_end_of_interrupt(InterruptIndex::Keyboard.as_u8());
     }
 }
 
