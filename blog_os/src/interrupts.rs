@@ -78,27 +78,37 @@ extern "x86-interrupt" fn timer_interrupt_handler(_stack_frame: InterruptStackFr
 }
 
 extern "x86-interrupt" fn keyboard_interrupt_handler(_stack_frame: InterruptStackFrame) {
+    use pc_keyboard::{DecodedKey, HandleControl, Keyboard, ScancodeSet1, layouts};
+    use spin::Mutex;
     use x86_64::instructions::port::Port;
+    // 初始化键盘，这是一个全局的 键盘状态机
+    lazy_static! {
+        static ref KEYBOARD: Mutex<Keyboard<layouts::Us104Key, ScancodeSet1>> =
+            Mutex::new(Keyboard::new(
+                ScancodeSet1::new(),  // 定义扫描码集为 ScancodeSet1
+                layouts::Us104Key,    // 把键盘布局定为 Us104Key，因为我们的键盘是 Us104 布局
+                HandleControl::Ignore // 不要处理控制键和组合键
+            ));
+    }
+
+    let mut keyboard = KEYBOARD.lock();
     // 我们需要从键盘扫描码端口读取扫描码
     // 因为键盘控制器在我们获取扫描码之前是不会发送下一个中断的
     let mut port = Port::new(0x60); // 键盘扫描码端口
-    let scancode: u8 = unsafe { port.read() }; // 从键盘扫描码端口读取扫描码
 
-    let key = match scancode {
-        0x02 => Some('1'),
-        0x03 => Some('2'),
-        0x04 => Some('3'),
-        0x05 => Some('4'),
-        0x06 => Some('5'),
-        0x07 => Some('6'),
-        0x08 => Some('7'),
-        0x09 => Some('8'),
-        0x0a => Some('9'),
-        0x0b => Some('0'),
-        _ => None,
-    };
-    if let Some(key) = key {
-        print!("{}", key);
+    let scancode: u8 = unsafe { port.read() }; // 从键盘扫描码端口读取扫描码
+    // 把扫描码转换成按键事件
+    // Ok(Some(event)) -> 拿到按键事件（例如 A 按下）
+    // Ok(None) -> 暂时没有完整事件（某些键要很多扫描码组合）
+    // Err(_) -> 无法识别的扫描码
+    if let Ok(Some(key_event)) = keyboard.add_byte(scancode) {
+        // 把按键事件转换成可打印字符或特殊字符
+        if let Some(key) = keyboard.process_keyevent(key_event) {
+            match key {
+                DecodedKey::Unicode(character) => print!("{}", character), // 普通字符，如 A、1、! 等
+                DecodedKey::RawKey(key) => print!("{:?}", key), // 原始键码，如 LeftShift、F1 等，debug 打印
+            }
+        }
     }
     unsafe {
         PICS.lock()
