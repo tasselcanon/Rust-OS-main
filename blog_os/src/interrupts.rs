@@ -45,6 +45,8 @@ lazy_static! {
         }
         idt[InterruptIndex::Timer.as_usize()].set_handler_fn(timer_interrupt_handler); // 注册定时器中断处理函数
         idt[InterruptIndex::Keyboard.as_usize()].set_handler_fn(keyboard_interrupt_handler); // 注册键盘中断处理函数
+        idt.page_fault.set_handler_fn(page_fault_handler); // 注册页故障处理函数，这样就不会触发双重故障 double fault 了
+
         idt
     };
 }
@@ -70,13 +72,14 @@ extern "x86-interrupt" fn double_fault_handler(
 
 // 定时器中断处理函数，用于处理定时器中断
 extern "x86-interrupt" fn timer_interrupt_handler(_stack_frame: InterruptStackFrame) {
-    print!(".");
+    // print!(".");
     unsafe {
         PICS.lock()
             .notify_end_of_interrupt(InterruptIndex::Timer.as_u8()); // 发送定时器中断结束信号(EOI)
     }
 }
 
+// 键盘中断处理函数，用于处理键盘中断
 extern "x86-interrupt" fn keyboard_interrupt_handler(_stack_frame: InterruptStackFrame) {
     use pc_keyboard::{DecodedKey, HandleControl, Keyboard, ScancodeSet1, layouts};
     use spin::Mutex;
@@ -114,6 +117,22 @@ extern "x86-interrupt" fn keyboard_interrupt_handler(_stack_frame: InterruptStac
         PICS.lock()
             .notify_end_of_interrupt(InterruptIndex::Keyboard.as_u8());
     }
+}
+
+use crate::hlt_loop;
+use x86_64::structures::idt::PageFaultErrorCode;
+extern "x86-interrupt" fn page_fault_handler(
+    stack_frame: InterruptStackFrame,
+    err_code: PageFaultErrorCode,
+) {
+    // CR2寄存器是会在 page fault 发生时，被 CPU 自动写入导致异常的虚拟地址
+    use x86_64::registers::control::Cr2;
+
+    println!("EXCEPTION: PAGE FAULT");
+    println!("Accessed Address: {:?}", Cr2::read()); // 可以用 read 函数读取并打印该寄存器
+    println!("Error Code: {:?}", err_code);
+    println!("{:#?}", stack_frame);
+    hlt_loop();
 }
 
 #[test_case]
