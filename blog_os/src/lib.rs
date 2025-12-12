@@ -6,6 +6,7 @@
 #![feature(abi_x86_interrupt)] // x86-interrupt 并不是稳定特性，需要手动启用
 pub mod gdt;
 pub mod interrupts;
+pub mod memory;
 pub mod serial;
 pub mod vga_buffer;
 
@@ -83,10 +84,14 @@ pub fn test_panic_handler(info: &PanicInfo) -> ! {
 
 // ==================
 //      测试区
+#[cfg(test)]
+use bootloader::{BootInfo, entry_point};
 
 #[cfg(test)]
-#[unsafe(no_mangle)]
-pub extern "C" fn _start() -> ! {
+entry_point!(test_kernal_main);
+
+#[cfg(test)]
+fn test_kernal_main(_boot_info: &'static BootInfo) -> ! {
     init();
     test_main();
     hlt_loop();

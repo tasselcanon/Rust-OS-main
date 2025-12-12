@@ -119,6 +119,8 @@ extern "x86-interrupt" fn keyboard_interrupt_handler(_stack_frame: InterruptStac
     }
 }
 
+// 页故障处理函数，用于处理页故障异常
+// 比如访问了一个不存在的地址，或者试图修改一个只读的地址
 use crate::hlt_loop;
 use x86_64::structures::idt::PageFaultErrorCode;
 extern "x86-interrupt" fn page_fault_handler(

@@ -21,8 +21,10 @@ fn panic(info: &PanicInfo) -> ! {
     blog_os::test_panic_handler(info)
 }
 
-#[unsafe(no_mangle)]
-pub extern "C" fn _start() -> ! {
+use bootloader::{BootInfo, entry_point};
+entry_point!(kernel_main);
+
+fn kernel_main(boot_info: &'static BootInfo) -> ! {
     println!("hello world{}", "!!!");
     blog_os::init();
 
