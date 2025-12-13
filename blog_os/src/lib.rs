@@ -4,12 +4,13 @@
 #![test_runner(crate::test_runner)]
 #![reexport_test_harness_main = "test_main"]
 #![feature(abi_x86_interrupt)] // x86-interrupt 并不是稳定特性，需要手动启用
+pub mod allocator;
 pub mod gdt;
 pub mod interrupts;
 pub mod memory;
 pub mod serial;
 pub mod vga_buffer;
-
+extern crate alloc;
 use core::panic::PanicInfo;
 
 // ==================
