@@ -5,9 +5,11 @@
 #![reexport_test_harness_main = "test_main"]
 
 use blog_os::println;
+use blog_os::task::Task;
+use blog_os::task::executor::Executor;
+use blog_os::task::keyboard;
 use core::panic::PanicInfo;
 extern crate alloc;
-use alloc::{boxed::Box, rc::Rc, vec, vec::Vec};
 
 #[cfg(not(test))]
 #[panic_handler]
@@ -25,6 +27,15 @@ fn panic(info: &PanicInfo) -> ! {
 use bootloader::{BootInfo, entry_point};
 entry_point!(kernel_main);
 
+async fn async_num() -> u32 {
+    42
+}
+
+async fn example_task() {
+    let num = async_num().await;
+    println!("num: {}", num);
+}
+
 fn kernel_main(boot_info: &'static BootInfo) -> ! {
     use blog_os::allocator;
     use blog_os::memory::{self, BootInfoFrameAllocator};
@@ -32,6 +43,9 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
 
     println!("Hello World{}\n", "!");
     blog_os::init();
+    // 测试框架会在测试完成后调用 `test_main`
+    #[cfg(test)]
+    test_main();
 
     let phys_mem_offset = VirtAddr::new(boot_info.physical_memory_offset); // 物理内存偏移量
     // 初始化页表映射器，用于后续的内存映射操作
@@ -41,30 +55,10 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
 
     allocator::init_heap(&mut mapper, &mut frame_allocator).expect("heap init failed");
 
-    let heap_value = Box::new(41);
-    println!("heap_value at: {:p}", heap_value);
-
-    let mut vec = Vec::new();
-    for i in 0..500 {
-        vec.push(i);
-    }
-    println!("vec at {:p}", vec.as_slice());
-
-    let reference_counted = Rc::new(vec![1, 2, 3]);
-    let cloned_reference = reference_counted.clone();
-    println!(
-        "current reference count is {}",
-        Rc::strong_count(&cloned_reference)
-    );
-    core::mem::drop(reference_counted);
-    println!(
-        "reference count is {} now",
-        Rc::strong_count(&cloned_reference)
-    );
-
-    // 测试框架会在测试完成后调用 `test_main`
-    #[cfg(test)]
-    test_main();
+    let mut executor = Executor::new();
+    executor.spawn(Task::new(example_task()));
+    executor.spawn(Task::new(keyboard::print_keypresses()));
+    executor.run();
 
     // 程序执行到这里说明没有崩溃，打印一条消息
     println!("\nIt did not crash!");

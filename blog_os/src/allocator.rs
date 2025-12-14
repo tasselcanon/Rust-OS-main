@@ -1,6 +1,6 @@
-use bump::BumpAllocator;
+// use bump::BumpAllocator;
+// use linked_list::LinkListAllocator;
 use fixed_size_block::FixedSizeBlockAllocator;
-use linked_list::LinkListAllocator;
 use x86_64::{
     VirtAddr,
     structures::paging::{
