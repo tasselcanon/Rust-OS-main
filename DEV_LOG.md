@@ -34,3 +34,4 @@
 -   2025/12/13 实现了翻译地址，使用 OffsetPageTable 来访问页表，创建了一个新的映射并分配页框
 -   2025/12/13 初步实现了堆，支持了简单的分配和释放
 -   2025/12/14 用两种方法实现了堆分配器，分别是 bump allocator 和 linked list allocator
+-   2025/12/14 实现了固定大小块分配器 fixed size block allocator

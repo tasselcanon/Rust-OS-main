@@ -1,4 +1,5 @@
 use bump::BumpAllocator;
+use fixed_size_block::FixedSizeBlockAllocator;
 use linked_list::LinkListAllocator;
 use x86_64::{
     VirtAddr,
@@ -7,6 +8,7 @@ use x86_64::{
     },
 };
 pub mod bump;
+pub mod fixed_size_block;
 pub mod linked_list;
 
 pub const HEAP_START: usize = 0x_4444_4444_0000; // 可随意任取，只要它尚未用于其他内存区域
@@ -71,4 +73,4 @@ fn align_up(addr: usize, align: usize) -> usize {
 }
 
 #[global_allocator]
-static ALLOCATOR: Locked<LinkListAllocator> = Locked::new(LinkListAllocator::new());
+static ALLOCATOR: Locked<FixedSizeBlockAllocator> = Locked::new(FixedSizeBlockAllocator::new());
