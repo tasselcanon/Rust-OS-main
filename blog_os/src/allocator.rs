@@ -1,10 +1,13 @@
-use linked_list_allocator::LockedHeap;
+use bump::BumpAllocator;
+use linked_list::LinkListAllocator;
 use x86_64::{
     VirtAddr,
     structures::paging::{
         FrameAllocator, Mapper, Page, PageTableFlags, Size4KiB, mapper::MapToError,
     },
 };
+pub mod bump;
+pub mod linked_list;
 
 pub const HEAP_START: usize = 0x_4444_4444_0000; // 可随意任取，只要它尚未用于其他内存区域
 pub const HEAP_SIZE: usize = 100 * 1024; // 100 KiB
@@ -39,7 +42,33 @@ pub fn init_heap(
     Ok(())
 }
 
-// 一个空的全局分配器，用于测试
+/// 在 spin 外添加一个包装器，用于确保分配器是线程安全的
+pub struct Locked<A> {
+    inner: spin::Mutex<A>,
+}
+impl<A> Locked<A> {
+    pub const fn new(inner: A) -> Self {
+        Locked {
+            inner: spin::Mutex::new(inner),
+        }
+    }
+
+    pub fn lock(&self) -> spin::MutexGuard<'_, A> {
+        self.inner.lock()
+    }
+}
+/// 向上对齐给定地址 `addr` 到对齐值 `align`
+fn align_up(addr: usize, align: usize) -> usize {
+    // 分步骤
+    /* let remainder = addr % align;
+    if remainder == 0 {
+        addr
+    } else {
+        addr - remainder + align
+    }*/
+    // 一步到位
+    (addr + align - 1) & !(align - 1)
+}
 
 #[global_allocator]
-static ALLOCATOR: LockedHeap = LockedHeap::empty();
+static ALLOCATOR: Locked<LinkListAllocator> = Locked::new(LinkListAllocator::new());
