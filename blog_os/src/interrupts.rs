@@ -1,5 +1,5 @@
 use crate::gdt;
-use crate::println;
+use crate::{print, println};
 use lazy_static::lazy_static;
 use pic8259::ChainedPics; // 用于映射主副 PIC 的映射布局
 use spin;
@@ -72,7 +72,7 @@ extern "x86-interrupt" fn double_fault_handler(
 
 // 定时器中断处理函数，用于处理定时器中断
 extern "x86-interrupt" fn timer_interrupt_handler(_stack_frame: InterruptStackFrame) {
-    // print!(".");
+    print!(".");
     unsafe {
         PICS.lock()
             .notify_end_of_interrupt(InterruptIndex::Timer.as_u8()); // 发送定时器中断结束信号(EOI)
