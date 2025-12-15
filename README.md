@@ -88,6 +88,4 @@ cargo test
 
 ---
 
-<div align="left">
-    <small>Created by Tassel</small>
-</div>
+<small><i>Created by Tassel</i></small>
